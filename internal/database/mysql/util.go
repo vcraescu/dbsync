@@ -35,7 +35,7 @@ func mysqlDump(username, password, host string, port int, schema string, tables 
 	if err != nil {
 		path, err = filepath.Abs("bin/mysqldump")
 		if err != nil {
-			return "", err
+			return "", errors.New("mysqldump not found")
 		}
 	}
 
@@ -69,7 +69,7 @@ func mysqlImport(username, password, host string, port int, schema, dump string)
 	if err != nil {
 		path, err = filepath.Abs("bin/mysql")
 		if err != nil {
-			return "", err
+			return "", errors.New("mysql client not found")
 		}
 	}
 

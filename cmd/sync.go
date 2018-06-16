@@ -10,22 +10,32 @@ import (
 )
 
 var syncCmd = &cobra.Command{
-	Use:   "sync",
-	Short: "Sync master to slave",
+	Use:   "sync [MASTER_NAME] [SLAVE_NAME]",
+	Short: "Sync master server with name [MASTER_NAME] from config to slave server with name [SLAVE_NAME] from config.",
+	Args:  cobra.ExactArgs(2),
 	Run:   runSyncCmd,
 }
 
-func runSyncCmd(cmd *cobra.Command, args []string) {
-	masterCfg := rootCmdFlags.CreateMasterConnectionConfig()
-	slaveCfg := rootCmdFlags.CreateSlaveConnectionConfig()
+func runSyncCmd(_ *cobra.Command, _ []string) {
+	masterCfg := config.CreateMasterConnectionConfig()
+	slaveCfg := config.CreateSlaveConnectionConfig()
 
-	if rootCmdFlags.SlaveSSHTunnelIsRequired() {
-		slaveTunn, err := startSSHTunnel(slaveCfg, rootCmdFlags.Slave.SSHCfg)
+	if config.MasterSSHTunnelIsRequired() {
+		masterTunn, err := startSSHTunnel(masterCfg, config.Master.SSHConfig)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		log.Printf("SSH Tunnel started at %s:%d\n", slaveTunn.LocalHost(), slaveTunn.LocalPort())
+		log.Printf("SSH Tunnel for master started at %s:%d\n", masterTunn.LocalHost(), masterTunn.LocalPort())
+	}
+
+	if config.SlaveSSHTunnelIsRequired() {
+		slaveTunn, err := startSSHTunnel(slaveCfg, config.Slave.SSHConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Printf("SSH Tunnel for slave started at %s:%d\n", slaveTunn.LocalHost(), slaveTunn.LocalPort())
 	}
 
 	masterConn := mysql.New(*masterCfg)

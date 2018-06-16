@@ -41,12 +41,12 @@ func (d *Diff) GenerateSQL(dumper *Dumper) (string, error) {
 func GenerateDiff(masterConn *Connection, slaveConn *Connection) (*Diff, error) {
 	masterChecksums, err := getTableChecksums(masterConn)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Master: %s", err.Error()))
+		return nil, fmt.Errorf("master table checksums: %s", err)
 	}
 
 	slaveChecksums, err := getTableChecksums(slaveConn)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Slave: %s", err.Error()))
+		return nil, fmt.Errorf("slave table checksums: %s", err)
 	}
 
 	diff := &Diff{}

@@ -1,0 +1,33 @@
+project_name: dbsync
+builds:
+  - binary: dbsync
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=0
+archive:
+  name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+  replacements:
+    darwin: macOS
+    linux: Linux
+    amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+env_files:
+  github_token: ./.github_token
+git:
+  short_hash: true
+release:
+  prerelease: true
+  disable: false
