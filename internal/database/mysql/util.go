@@ -1,17 +1,39 @@
 package mysql
 
 import (
-	"fmt"
-	"strconv"
-	"os/exec"
 	"bytes"
 	"errors"
-	"strings"
+	"fmt"
+	"net/url"
+	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
-func generateDSN(username, password, host string, port int, dbname string) string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", username, password, host, port, dbname)
+func generateDSN(cfg ConnectionConfig) (string, error) {
+	dsn := fmt.Sprintf(
+		"%s:%s@tcp(%s:%d)/%s",
+		cfg.Username,
+		cfg.Password,
+		cfg.Host,
+		cfg.Port,
+		cfg.Schema,
+	)
+
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return "", err
+	}
+
+	q := u.Query()
+
+	if cfg.Timezone != "" {
+		q.Set("time_zone", fmt.Sprintf("'%s'", cfg.Timezone))
+	}
+
+	u.RawQuery = q.Encode()
+	return u.String(), nil
 }
 
 func generateDropTableStatement(table string) string {
@@ -47,7 +69,7 @@ func mysqlDump(username, password, host string, port int, schema string, tables 
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", errors.New(fmt.Sprintf("%s: %s", err, stderr.String()))
+		return "", fmt.Errorf("%s: %s", err, stderr.String())
 	}
 
 	return out.String(), nil

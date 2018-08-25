@@ -1,9 +1,9 @@
 package tunnel
 
 import (
+	"io/ioutil"
 	"net"
 	"os"
-	"io/ioutil"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -27,6 +27,7 @@ func readPKFile(file string) ([]byte, error) {
 	return buff, nil
 }
 
+// CreateSSHAgentAuthMethod - creates new ssh agent auth method
 func CreateSSHAgentAuthMethod() (ssh.AuthMethod, error) {
 	ag, err := newSSHAgent()
 	if err != nil {
@@ -36,6 +37,7 @@ func CreateSSHAgentAuthMethod() (ssh.AuthMethod, error) {
 	return ssh.PublicKeysCallback(ag.Signers), nil
 }
 
+// CreatePKAuthMethod - creates a private key auth method
 func CreatePKAuthMethod(file string) (ssh.AuthMethod, error) {
 	buff, err := readPKFile(file)
 	if err != nil {

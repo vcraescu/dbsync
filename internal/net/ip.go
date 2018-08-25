@@ -1,10 +1,11 @@
 package net
 
 import (
-	"net"
 	"errors"
+	"net"
 )
 
+// HostnameToIP4 - transforms a hostname to IP4
 func HostnameToIP4(hostname string) (string, error) {
 	ips, err := net.LookupIP(hostname)
 	if err != nil {

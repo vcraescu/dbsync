@@ -6,15 +6,18 @@ import (
 	"strings"
 )
 
+// Diff - computed diff
 type Diff struct {
 	Create []string
 	Delete []string
 }
 
+// Empty - returns true if diff is empty
 func (d *Diff) Empty() bool {
 	return len(d.Create) == 0 && len(d.Delete) == 0
 }
 
+// GenerateSQL - generate dump sql
 func (d *Diff) GenerateSQL(dumper *Dumper) (string, error) {
 	var dump string
 	if d.Empty() {
@@ -25,7 +28,7 @@ func (d *Diff) GenerateSQL(dumper *Dumper) (string, error) {
 		var err error
 		dump, err = dumper.DumpTables(d.Create...)
 		if err != nil {
-			return dump, errors.New(fmt.Sprintf("Generate SQL: %s", err))
+			return dump, fmt.Errorf("Generate SQL: %s", err)
 		}
 
 		dump += "\n"
@@ -38,6 +41,7 @@ func (d *Diff) GenerateSQL(dumper *Dumper) (string, error) {
 	return strings.Trim(dump, " \n"), nil
 }
 
+// GenerateDiff - generate diff between to databases
 func GenerateDiff(masterConn *Connection, slaveConn *Connection) (*Diff, error) {
 	masterChecksums, err := getTableChecksums(masterConn)
 	if err != nil {

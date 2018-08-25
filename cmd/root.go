@@ -1,21 +1,22 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-	"log"
 	"errors"
+	"fmt"
+	"log"
+	"os"
 
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/vcraescu/dbsync/internal/database/mysql"
+	"github.com/vcraescu/dbsync/internal/net"
 	"github.com/vcraescu/dbsync/internal/tunnel"
 	"golang.org/x/crypto/ssh"
-	"github.com/vcraescu/dbsync/internal/net"
-	"github.com/mitchellh/go-homedir"
-	"github.com/spf13/viper"
 )
 
-const Version = "0.0.1"
+// Version number
+const Version = "0.0.2"
 
 var rootCmd = &cobra.Command{
 	Use:          "dbsync master_server slave_server",
@@ -46,6 +47,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+// SSHConfig - ssh config from yaml file
 type SSHConfig struct {
 	Host string `mapstructure:"host"`
 	User string `mapstructure:"user"`
@@ -53,6 +55,7 @@ type SSHConfig struct {
 	Key  string `mapstructure:"key"`
 }
 
+// ServerConfig - server config from yaml file
 type ServerConfig struct {
 	SSHConfig SSHConfig `mapstructure:"ssh"`
 	Username  string    `mapstructure:"username"`
@@ -60,8 +63,10 @@ type ServerConfig struct {
 	Host      string    `mapstructure:"host"`
 	Schema    string    `mapstructure:"schema"`
 	Port      int       `mapstructure:"port"`
+	Timezone  string    `mapstructure:"timezone"`
 }
 
+// Config - the entire yaml config
 type Config struct {
 	Servers    map[string]ServerConfig `mapstructure:"servers"`
 	Master     ServerConfig
@@ -71,6 +76,7 @@ type Config struct {
 
 var config = &Config{}
 
+// CreateMasterConnectionConfig - create master server mysql connection config
 func (cfg *Config) CreateMasterConnectionConfig() *mysql.ConnectionConfig {
 	ip, err := cfg.GetMasterHostIP()
 	if err != nil {
@@ -83,9 +89,11 @@ func (cfg *Config) CreateMasterConnectionConfig() *mysql.ConnectionConfig {
 		Host:     ip,
 		Port:     cfg.Master.Port,
 		Schema:   cfg.Master.Schema,
+		Timezone: cfg.Master.Timezone,
 	}
 }
 
+// CreateSlaveConnectionConfig - creates slave connection mysql config
 func (cfg *Config) CreateSlaveConnectionConfig() *mysql.ConnectionConfig {
 	ip, err := cfg.GetSlaveHostIP()
 	if err != nil {
@@ -98,25 +106,31 @@ func (cfg *Config) CreateSlaveConnectionConfig() *mysql.ConnectionConfig {
 		Host:     ip,
 		Port:     cfg.Slave.Port,
 		Schema:   cfg.Slave.Schema,
+		Timezone: cfg.Slave.Timezone,
 	}
 }
 
+// SlaveSSHTunnelIsRequired - determines if slave ssh tunneling is necessary
 func (cfg *Config) SlaveSSHTunnelIsRequired() bool {
 	return cfg.Slave.SSHConfig.User != "" && cfg.Slave.SSHConfig.Host != "" && cfg.Slave.SSHConfig.Port > 0
 }
 
+// MasterSSHTunnelIsRequired - determines if master ssh tunneling is necessary
 func (cfg *Config) MasterSSHTunnelIsRequired() bool {
 	return cfg.Master.SSHConfig.User != "" && cfg.Master.SSHConfig.Host != "" && cfg.Master.SSHConfig.Port > 0
 }
 
+// GetMasterHostIP - returns master host ip
 func (cfg *Config) GetMasterHostIP() (string, error) {
 	return net.HostnameToIP4(cfg.Master.Host)
 }
 
+// GetSlaveHostIP - returns slave host ip
 func (cfg *Config) GetSlaveHostIP() (string, error) {
 	return net.HostnameToIP4(cfg.Slave.Host)
 }
 
+// Validate - validate configuration
 func (cfg *Config) Validate() bool {
 	valid := true
 	if cfg.Master.Username == "" {
@@ -189,6 +203,7 @@ func (cfg *Config) Validate() bool {
 	return valid
 }
 
+// CreateAuthMethod - creates auth method
 func (cfg *SSHConfig) CreateAuthMethod() (*ssh.AuthMethod, error) {
 	if cfg.Key == "" {
 		authMethod, err := tunnel.CreateSSHAgentAuthMethod()
@@ -278,6 +293,7 @@ func initConfig() {
 	viper.Unmarshal(&config)
 }
 
+// Execute - execute command
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

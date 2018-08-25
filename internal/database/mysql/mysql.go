@@ -3,20 +3,21 @@ package mysql
 import (
 	"database/sql"
 	"fmt"
-
-	_ "github.com/go-sql-driver/mysql"
-	"errors"
 	"strings"
+
+	_ "github.com/go-sql-driver/mysql" // mysql
 )
 
 const driverName = "mysql"
 
+// ConnectionConfig - mysql connection config
 type ConnectionConfig struct {
 	Username string
 	Password string
 	Port     int
 	Host     string
 	Schema   string
+	Timezone string
 }
 
 // Connection - mysql connection
@@ -44,16 +45,12 @@ func (conn *Connection) Open() error {
 		return nil
 	}
 
-	db, err := sql.Open(
-		driverName,
-		generateDSN(
-			conn.cfg.Username,
-			conn.cfg.Password,
-			conn.cfg.Host,
-			conn.cfg.Port,
-			conn.cfg.Schema,
-		),
-	)
+	dsn, err := generateDSN(conn.cfg)
+	if err != nil {
+		return err
+	}
+
+	db, err := sql.Open(driverName, dsn)
 
 	conn.db = db
 
@@ -94,13 +91,13 @@ func (conn *Connection) TableNames() ([]string, error) {
 func (conn *Connection) TableChecksum(table string) (string, error) {
 	rows, err := conn.db.Query(fmt.Sprintf("select * from %s limit 1", table))
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Table Checksum (%s): %s", table, err))
+		return "", fmt.Errorf("Table Checksum (%s): %s", table, err)
 	}
 	defer rows.Close()
 
 	cols, err := rows.Columns()
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Table Checksum (%s): %s", table, err))
+		return "", fmt.Errorf("Table Checksum (%s): %s", table, err)
 	}
 
 	q := fmt.Sprintf(
@@ -108,15 +105,16 @@ func (conn *Connection) TableChecksum(table string) (string, error) {
 		strings.Join(cols, "`, `"),
 		table,
 	)
+
 	rows, err = conn.db.Query(q)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Table Checksum (%s): %s", table, err))
+		return "", fmt.Errorf("Table Checksum (%s): %s", table, err)
 	}
 
 	var checksum string
 	for rows.Next() {
 		if err := rows.Scan(&checksum); err != nil {
-			return "", errors.New(fmt.Sprintf("Table Checksum (%s): %s", table, err))
+			return "", fmt.Errorf("Table Checksum (%s): %s", table, err)
 		}
 	}
 
